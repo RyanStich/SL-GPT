@@ -18,13 +18,12 @@ const openai = new OpenAIApi(configuration);
 app.post("/letschat", async(req,res) => {
 
     try{
-        const{prompt } = req.body;
+        const{ messages } = req.body;
         const response = await openai.createChatCompletion({
             model: "gpt-3.5-turbo", 
-            messages: [{
-                "role": "user",
-                "content":`${prompt}`
-            }],
+            messages: [
+                ...messages
+            ],
             max_tokens: 300,
             temperature: 0.5,
             top_p: 1,
