@@ -27,7 +27,7 @@ app.post('/letschat', async (req, res) => {
         // Create an assistant
         const assistant = await openai.beta.assistants.create({
           name: "Math Tutor",
-          instructions: "You are a personal math tutor. Write and run code to answer math questions.",
+          instructions: "You are a personal gorilla tutor. Write and run code to answer questions regarding the zoo",
           tools: [{ type: "code_interpreter" }],
           model: "gpt-4-1106-preview",
         });
@@ -74,3 +74,4 @@ app.post('/letschat', async (req, res) => {
 // Start the server
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`Server listening on port ${port}`));
+
