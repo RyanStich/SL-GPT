@@ -14,6 +14,8 @@ const openai = new OpenAI({
   apiKey: secretKey,
 });
 
+const uploadedFileId = 'file-pbFHxNimDOZbfY11xjw0Mliv';
+
 // Create an Express app
 const app = express();
 app.use(cors());
@@ -26,10 +28,11 @@ app.post('/letschat', async (req, res) => {
 
         // Create an assistant
         const assistant = await openai.beta.assistants.create({
-          name: "Math Tutor",
-          instructions: "You are a personal gorilla tutor. Write and run code to answer questions regarding the zoo",
+          name: "Metis Cultural Wellness Expert",
+          instructions: "You are a personal tutor who is trained on the knowledge of Metis Cultural Wellness. Prepare to write and run code to answer questions regarding this subject",
           tools: [{ type: "code_interpreter" }],
           model: "gpt-4-1106-preview",
+          file_ids: [uploadedFileId],
         });
 
         // Create a thread
