@@ -1,14 +1,8 @@
-// Import the required dependencies
 require("dotenv").config();
 const OpenAI = require("openai");
 const express = require('express');
 const cors = require('cors');
-const readline = require("readline").createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
 
-// Create an OpenAI connection
 const secretKey = process.env.OPEN_AI_KEY;
 const openai = new OpenAI({
   apiKey: secretKey,
@@ -16,65 +10,88 @@ const openai = new OpenAI({
 
 const uploadedFileId = 'file-pbFHxNimDOZbfY11xjw0Mliv';
 
-// Create an Express app
+let assistantId = null;
+let threadId = null;
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Endpoint to handle chat requests from the frontend
+async function getOrCreateAssistant() {
+  if (!assistantId) {
+    try {
+      const assistant = await openai.beta.assistants.create({
+        name: "Metis Cultural Wellness Expert",
+        instructions: "You are a personal tutor who is trained on the knowledge of Metis Cultural Wellness. Prepare to write and run code to answer questions regarding this subject",
+        tools: [{ type: "code_interpreter" }],
+        model: "gpt-4-1106-preview",
+        file_ids: [uploadedFileId],
+      });
+      console.log(assistant); // Check the structure of the returned assistant object
+      assistantId = assistant.id; // Assuming the 'id' is directly on the assistant object
+    } catch (error) {
+      console.error('Error creating assistant:', error);
+      throw error; // Rethrow the error to be caught by the calling function
+    }
+  }
+  return assistantId;
+}
+
+async function getOrCreateThread() {
+  if (!threadId) {
+    try {
+      const thread = await openai.beta.threads.create();
+      console.log(thread); // Check the structure of the returned thread object
+      threadId = thread.id; // Update this to the correct path based on the logged object structure
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      throw error; // Rethrow the error to be caught by the calling function
+    }
+  }
+  return threadId;
+}
+
+
 app.post('/letschat', async (req, res) => {
     try {
         const { messages } = req.body;
+        const assistant_id = await getOrCreateAssistant();
+        const thread_id = await getOrCreateThread();
 
-        // Create an assistant
-        const assistant = await openai.beta.assistants.create({
-          name: "Metis Cultural Wellness Expert",
-          instructions: "You are a personal tutor who is trained on the knowledge of Metis Cultural Wellness. Prepare to write and run code to answer questions regarding this subject",
-          tools: [{ type: "code_interpreter" }],
-          model: "gpt-4-1106-preview",
-          file_ids: [uploadedFileId],
-        });
-
-        // Create a thread
-        const thread = await openai.beta.threads.create();
-
-        // Add user's message to the thread
         for (const message of messages) {
-          await openai.beta.threads.messages.create(thread.id, {
+          await openai.beta.threads.messages.create(thread_id, {
             role: message.role,
             content: message.content,
           });
         }
 
-        // Run the assistant
-        const run = await openai.beta.threads.runs.create(thread.id, {
-          assistant_id: assistant.id,
+        const run = await openai.beta.threads.runs.create(thread_id, {
+          assistant_id: assistant_id,
         });
 
-        // Retrieve the run status
-        let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+        let runStatus = await openai.beta.threads.runs.retrieve(thread_id, run.id);
 
-        // Polling mechanism to check if runStatus is completed
         while (runStatus.status !== "completed") {
           await new Promise((resolve) => setTimeout(resolve, 2000));
-          runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+          runStatus = await openai.beta.threads.runs.retrieve(thread_id, run.id);
         }
 
-        // Get the assistant's response
-        const messagesResponse = await openai.beta.threads.messages.list(thread.id);
+        const messagesResponse = await openai.beta.threads.messages.list(thread_id);
         const assistantResponse = messagesResponse.data.filter(
           (message) => message.role === "assistant"
         );
 
-        // Send back the assistant's response
         res.status(200).json({ responses: assistantResponse });
     } catch (error) {
         console.error(error);
-        res.status(500).send("An error occurred");
+        res.status(500).json({ error: "An error occurred", details: error.message });
     }
 });
 
-// Start the server
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "An internal server error occurred", details: err.message });
+});
+
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`Server listening on port ${port}`));
-
