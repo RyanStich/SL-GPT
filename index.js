@@ -2,6 +2,8 @@ require("dotenv").config();
 const OpenAI = require("openai");
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+
 
 const secretKey = process.env.OPEN_AI_KEY;
 const openai = new OpenAI({
@@ -16,6 +18,7 @@ let threadId = null;
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 async function getOrCreateAssistant() {
   if (!assistantId) {
